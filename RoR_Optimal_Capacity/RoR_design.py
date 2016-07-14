@@ -16,7 +16,7 @@ from mpl_toolkits.mplot3d import Axes3D
 eff = 0.8 # overall efficiency
 convert = 0.00046905 # Unit conversion factor from AF/month to m3/s
 rho = 1000 # density of water, kg/m3
-g = 9.81 # gravitational constant, m/s2
+g = 9.81 # gravitational constant, m/s2 
 H = 5 # head, m
 a = 27.75 # exponential cost constant a*Q**b
 b = 3 # exponential cost constant a*Q**b
@@ -54,6 +54,26 @@ def NPV(rho,g,eff,H,q_process,delta_t,p,Q,a,b):
 	NPVal = PV[0] - cost(a, b, Q)
 	return NPVal
 
+def lognorm_pdf(x,mean,std):
+	dist_pdf = lognorm.pdf(x,std,0,mean)
+	return dist_pdf
+
+def lognorm_cdf(x,mean,std):
+	dist_cdf = lognorm.cdf(x,std,0,mean)
+	return dist_cdf
+
+def EV_flow(mean,std,Q):
+	EV = quad(lambda x: lognorm_pdf(x,mean,std)*x, 0, Q)
+	EV_2 = (1 - lognorm_cdf(Q,mean,std))*Q
+	EV_total = EV[0] + EV_2
+	return EV_total
+
+def NPV_prob(rho,g,eff,H,delta_t,p,Q,mean,std,a,b):
+	t = np.arange(0,100000,0.5)
+	PV = simps(np.exp(-t*r)*rho*g*eff*H*delta_t*p/1000*EV_flow(mean,std,Q), t)
+	NPVal = PV - cost(a, b, Q)
+	return NPVal
+
 # declare matrices to store data
 enum_q = np.arange(lb, ub, inc)
 
@@ -75,12 +95,13 @@ for time in range(len(months)):
 				q_process = itemx
 			else:
 				q_process = item
-			simulation[i,time] = NPV(rho,g,eff,H,q_process,delta_t,price[time],item,a,b)
+			# simulation[i,time] = NPV(rho,g,eff,H,q_process,delta_t,price[time],item,a,b) # Deterministic Approach
+			simulation[i,time] = NPV_prob(rho,g,eff,H,delta_t,price[time],item,q_mean[time],q_std[time],a,b) # Probabilistic Approach
 
 	NPV_opt[time] = np.max(simulation[:,time])
 	Q_opt[time] = enum_q[np.argmax(simulation[:,time])]
 
-	print('month: ' + str(months[time]) + ', Q_optimal: ' + str(Q_opt[time]) + ' m3/s' + ', Q_mean: ' + str(q_mean[time]))
+	print('month: '+str(months[time])+', Q_optimal: '+str(Q_opt[time])+' m3/s'+', Q_mean: '+str(q_mean[time]))
 
 	plt.plot(enum_q, simulation[:,time]/(10**6), label=months[time]+ ', Qdesign: '+str(Q_opt[time]))
 
