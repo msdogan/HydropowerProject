@@ -78,20 +78,16 @@ Q_opt = np.zeros(len(months))
 q_mean = np.zeros(len(months))
 q_std = np.zeros(len(months))
 
-
 d = 1 # dimension of decision variable space
+s = 0.4 # stdev of normal noise (if this is too big, it's just random search!)
+
 num_seeds = 10
+max_NFE = 200000
 
-popsize = 50
-CR = 0.9 # crossover probability
-F = 0.8 # between 0 and 2, vector step
-max_NFE = 20000 # should be a multiple
-
+ft = np.zeros((num_seeds, max_NFE))
+x = np.zeros(d)
 xt = np.zeros((num_seeds,d))
 ft_best = np.zeros((num_seeds,d))
-ft = np.zeros((num_seeds, max_NFE/popsize))
-P = np.zeros((popsize,d))
-
 
 # Note: current model does not store best values for each time-step. I need to update this
 
@@ -100,57 +96,41 @@ for time in range(len(months)):
   q_mean[time] = np.mean(q[:,time]) # mean flow, m3/s
   q_std[time] = np.std(q[:,time]) # standard deviation, m3/s
 
-  # differential evolution
+  # hill climbing
   for seed in range(num_seeds):
     np.random.seed(seed)
-    # random initial population (popsize x d matrix)
-    P = np.random.uniform(lb, ub, (popsize,d))
-    f = np.zeros(popsize) # we'll evaluate them later
 
+    # random initial starting point
+    x = np.random.uniform(lb, ub)
+    
+    bestf = NPV_prob(rho,g,eff,H,delta_t,price[time],x,q_mean[time],q_std[time],a,b)
     nfe = 0
-    f_best, x_best = None, None
 
     while nfe < max_NFE:
 
-      # for each member of the population ..
-      for i,x in enumerate(P):
-        
-        # pick two random population members
-        xb,xc = P[np.random.randint(0, popsize, 2), :]
-        trial_x = np.copy(x)
+      trial_x = x + np.random.normal(0,s,d)
+      trial_f = NPV_prob(rho,g,eff,H,delta_t,price[time],trial_x,q_mean[time],q_std[time],a,b)
 
-        # for each dimension ..
-        for j in range(d):
-          if np.random.rand() < CR:
-            trial_x[j] = x[j] + F*(xb[j]-xc[j])
-                
-        f[i] = NPV_prob(rho,g,eff,H,delta_t,price[time],x,q_mean[time],q_std[time],a,b)
-        trial_f = NPV_prob(rho,g,eff,H,delta_t,price[time],trial_x,q_mean[time],q_std[time],a,b)
-        nfe += 1
+      if trial_f > bestf:
+        x = trial_x
+        bestf = trial_f
+      
+      ft[seed,nfe] = bestf
+      nfe += 1
 
-        # if this is better than the parent, replace
-        if trial_f < f[i]:
-          P[i,:] = trial_x
-          f[i] = trial_f
-
-      # keep track of best here
-      if f_best is None or f.min() < f_best:
-        f_best = f.min()
-        x_best = P[f.argmin(),:]
-
-      ft[seed,nfe/popsize-1] = f_best
-    
+    xt[seed,:] = x
+    ft_best[seed,:] = bestf
     # for each trial print the result (but the traces are saved in ft)
-    xt[seed,:] = x_best
-    ft_best[seed,:] = -1*f_best
-    print (-1*f_best)
+    print(bestf)
+
 
 # # Save objective results to a .csv file
 # np.savetxt('xt.csv', xt, delimiter=",")
 # np.savetxt('ft.csv', ft_best, delimiter=",")
 
-ft = -1*ft
-plt.semilogx(range(popsize,max_NFE+1,popsize), ft.T, color='steelblue', linewidth=1)
+plt.loglog(ft.T, color='steelblue', linewidth=1)
 plt.xlabel('Iterations')
 plt.ylabel('Objective Value')
 plt.show()
+
+

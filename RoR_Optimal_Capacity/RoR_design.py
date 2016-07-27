@@ -35,6 +35,9 @@ price = price / 100 # convert to $/kWh
 
 months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
 
+# method = 1 is Deterministic, method = 2 is Probabilistic
+method = 1
+
 # define cost and benefit functions
 def cost(a,b,Q):
   return a*Q**b
@@ -83,6 +86,7 @@ Q_opt = np.zeros(len(months))
 q_mean = np.zeros(len(months))
 q_std = np.zeros(len(months))
 
+
 for time in range(len(months)):
 
 	q_mean[time] = np.mean(q[:,time]) # mean flow, m3/s
@@ -90,12 +94,14 @@ for time in range(len(months)):
 
 	for i,item in enumerate(enum_q):
 
-		for j,itemx in enumerate(q[:,time]):
-			if itemx < item:
-				q_process = itemx
-			else:
-				q_process = item
-			# simulation[i,time] = NPV(rho,g,eff,H,q_process,delta_t,price[time],item,a,b) # Deterministic Approach
+		if method == 0: # Deterministic Approach
+			for j,itemx in enumerate(q[:,time]):
+				if itemx < item:
+					q_process = itemx
+				else:
+					q_process = item
+				simulation[i,time] = NPV(rho,g,eff,H,q_process,delta_t,price[time],item,a,b) # Deterministic Approach
+		else: # Probabilistic Approach
 			simulation[i,time] = NPV_prob(rho,g,eff,H,delta_t,price[time],item,q_mean[time],q_std[time],a,b) # Probabilistic Approach
 
 	NPV_opt[time] = np.max(simulation[:,time])
