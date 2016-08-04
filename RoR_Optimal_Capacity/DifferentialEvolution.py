@@ -23,7 +23,6 @@ delta_t = 24*30 # 1 Day = 720 Hours
 
 lb = 0
 ub = 25
-inc = 0.7
 
 q = np.loadtxt('Cosumnes_monthly_divided.txt', skiprows=1)*convert # Cosumnes River Natural Flows from Oct to Sep
 price = np.loadtxt('energy_prices.txt') # Average Retail Price of electricity in California from Oct 2013 to Sep 2014, cent/kWh
@@ -80,12 +79,12 @@ q_std = np.zeros(len(months))
 
 
 d = 1 # dimension of decision variable space
-num_seeds = 10
+num_seeds = 5
 
 popsize = 50
 CR = 0.9 # crossover probability
 F = 0.8 # between 0 and 2, vector step
-max_NFE = 20000 # should be a multiple
+max_NFE = 200 # should be a multiple
 
 xt = np.zeros((num_seeds,d))
 ft_best = np.zeros((num_seeds,d))
@@ -144,6 +143,7 @@ for time in range(len(months)):
     xt[seed,:] = x_best
     ft_best[seed,:] = -1*f_best
     print (-1*f_best)
+    print(x_best)
 
 # # Save objective results to a .csv file
 # np.savetxt('xt.csv', xt, delimiter=",")
