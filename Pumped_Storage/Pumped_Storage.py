@@ -10,11 +10,13 @@ import pandas as pd
 import seaborn as sns
 sns.set_style('whitegrid')
 
+# This part is all about data (hourly marginal price (wholesale) $/MWh)
+##*****************************************************************************
 # this function creates price-duration curves
 def dur_curve(load, duration, time_period):
     data_raw = [] # empty list to store temporary data
     if duration == 'Monthly':
-        month = months.index(time_period) + 1
+        month = months.index(time_period) + 1 # python starts from index 0
         print(month)
         for i in range(len(load)):
             if load.Month[i] == month: # Unit is $/MWh
@@ -34,7 +36,7 @@ def dur_curve(load, duration, time_period):
         print('please define correct duration and/or time period')
         
     # after determining what duration and time period to use, create price-duration data
-    data = np.sort(data_raw) # sort from large to small
+    data = np.sort(data_raw) # sort data
     rank = sp.rankdata(data, method='average') # calculate the rank
     rank = rank[::-1] # non-exceedance prob. Comment out to get exceedance prob
     prob = [100*(rank[i]/(len(data)+1)) for i in range(len(data))] # frequency data
@@ -51,7 +53,7 @@ def dur_curve(load, duration, time_period):
 
 # Load Price data from OASIS (CAISO) http://oasis.caiso.com/mrioasis/logon.do
 name = '20160901_20161002_PRC_LMP_DAM_20161005_11_19_18_v1.csv'
-df = pd.read_csv(name, parse_dates=True)
+df = pd.read_csv(name, parse_dates=True).sort(columns= 'INTERVALSTARTTIME_GMT') # read data and sort by time (gmt)
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep','Oct', 'Nov', 'Dec']
 
 P = [[],[],[],[],[],[]] # empty list to store required data
@@ -69,10 +71,14 @@ for i in range(len(df)):
  
 P = np.array(P) # convert list to numpy array    
 Date_Price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to data frame
-
+print(df)
 # Examples of 'dur_curve' function use
 #print(dur_curve(Date_Price, 'Annual', '2016')) # annual example
-#print(dur_curve(Date_Price, 'Monthly', 'Sep')) # monthly example
-print(dur_curve(Date_Price, 'Daily', '2016-9-5')) # daily example ('year-month-day')
+print(dur_curve(Date_Price, 'Monthly', 'Sep')) # monthly example
+#print(dur_curve(Date_Price, 'Daily', '2016-9-7')) # daily example ('year-month-day')
+
+Date_Price.to_csv('price.csv')
+
+##*****************************************************************************
 
 
