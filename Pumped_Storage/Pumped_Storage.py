@@ -48,5 +48,11 @@ for item,x in enumerate(price_duration.Frequency):
 plt.axvline(x=H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='k', label = 'Generate Power')
 plt.axvline(x=100-H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='b', label = 'Pump')
 plt.legend(fontsize = 11, loc=9)
+y1 = 0
+y2 = price_duration.Price.max()
+plt.text(0.5,7, 'Generating Hours')
+plt.text(79,7, 'Pumping Hours')
+plt.text(23,150, 'Generating Price Threshold >= ' + str(round(f(H_G),2)) + ' $/MWh')
+plt.text(23,125, 'Pumping Price Threshold <= ' + str(round(f(100-H_G),2)) + ' $/MWh')
 plt.savefig("figure.pdf")
 plt.show()
