@@ -51,8 +51,8 @@ def dur_curve(load, duration, time_period):
     pdur[0],pdur[1] = data, prob
     pdur = np.array(pdur)
     price_duration = pd.DataFrame(pdur.T, columns = col, dtype = 'float')
-    name = 'price_duration_' + str(time_period) + '.csv'
-    price_duration.to_csv(name)    
+    s_name = 'price_duration_' + str(time_period) + '.csv'
+    price_duration.to_csv(s_name)    
     return price_duration
 
 # Load Price data from OASIS (CAISO) http://oasis.caiso.com/mrioasis/logon.do
@@ -77,9 +77,19 @@ P = np.array(P) # convert list to numpy array
 price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to data frame
 
 # Examples of 'dur_curve' function use
-#price_duration = dur_curve(price, 'Annual', '2016') # annual example
-price_duration = dur_curve(price, 'Monthly', 'Jul') # monthly example
-#price_duration = dur_curve(price, 'Daily', '2016-9-7') # daily example ('year-month-day')
+# Annual Duration and Time
+#duration = 'Annual'
+#time = '2016'
+
+# Monthly Duration and Time
+duration = 'Monthly'
+time = 'Jul'
+
+# Daily Duration and Time
+#duration = 'Daily'
+#time = '2016-9-7'
+
+price_duration = dur_curve(price, duration, time)
 
 price.to_csv('price.csv')
 
@@ -92,6 +102,9 @@ e_p = 0.80 # pumping efficiency
 z = np.polyfit(price_duration.Frequency, price_duration.Price, 9)
 f = np.poly1d(z)
 
+x_new = np.linspace(0, price_duration.Frequency.max(), 50)
+y_new = f(x_new)
+
 # normal distribution (cumulative, exceedance)
 y_norm = np.linspace(0, price.Price.max(), 50)
 x_norm = (1-sp.norm(price_duration.Price.mean(), price_duration.Price.std()).cdf(y_norm))*100
@@ -100,13 +113,11 @@ x_norm = (1-sp.norm(price_duration.Price.mean(), price_duration.Price.std()).cdf
 plt.scatter(price_duration.Frequency, price_duration.Price)
 plt.xlim([0,price_duration.Frequency.max()])
 plt.ylim([0,price_duration.Price.max()])
-plt.plot(x_norm, y_norm, 'cyan', label = 'Normal Dist.')
-x_new = np.linspace(0, price_duration.Frequency.max(), 50)
-y_new = f(x_new)
-plt.plot(x_new, y_new, 'r', label = 'Curve fit')
+plt.plot(x_norm, y_norm, 'cyan', label = 'Normal Dist.') # normal dist. plot
+plt.plot(x_new, y_new, 'r', label = 'Curve fit') # curve fit plot
 plt.ylabel('hourly price $/MWh', fontsize = 14)
 plt.xlabel('duration %', fontsize = 14)
-plt.title('Optimal Generating and Pumping Hours for July', fontsize = 16)
+plt.title('Optimal Generating and Pumping Hours for ' + str(time), fontsize = 16)
 plt.grid(False)
 
 for item,x in enumerate(price_duration.Frequency):
@@ -124,8 +135,8 @@ print('Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours')
 plt.axvline(x=H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='k', label = 'Generate Power')
 plt.axvline(x=price_duration.Frequency.max()-H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='b', label = 'Pump')
 plt.legend(fontsize = 11, loc=9)
-plt.text(0.5,7, 'Generating Hours')
-plt.text(79,7, 'Pumping Hours')
+plt.text(0.5,270, 'Generating Hours', color = 'k')
+plt.text(79,270, 'Pumping Hours', color = 'b')
 plt.text(25,150, 'Generating Price Threshold >= ' + str(round(f(H_G),2)) + ' $/MWh', fontsize = 11)
 plt.text(25,125, 'Pumping Price Threshold <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', fontsize = 11)
 plt.savefig("figure_pd.pdf")
