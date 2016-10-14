@@ -9,7 +9,7 @@ Created on Wed Oct 12 10:50:15 2016
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as sp
+import scipy as sp
 import pandas as pd
 import seaborn as sns
 sns.set_style('whitegrid')
@@ -41,7 +41,7 @@ def dur_curve(load, duration, time_period):
         
     # after determining what duration and time period to use, create price-duration data
     data = np.sort(data_raw) # sort data
-    rank = sp.rankdata(data, method='average') # calculate the rank
+    rank = sp.stats.rankdata(data, method='average') # calculate the rank
     rank = rank[::-1] # non-exceedance prob. Comment out to get exceedance prob
     prob = [100*(rank[i]/(len(data)+1)) for i in range(len(data))] # frequency data
     
@@ -83,11 +83,11 @@ price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to 
 
 # Monthly Duration and Time
 duration = 'Monthly'
-time = 'Jul'
+time = 'Aug'
 
 # Daily Duration and Time
 #duration = 'Daily'
-#time = '2016-9-7'
+#time = '2016-9-11'
 
 price_duration = dur_curve(price, duration, time)
 
@@ -106,14 +106,14 @@ x_new = np.linspace(0, price_duration.Frequency.max(), 50)
 y_new = f(x_new)
 
 # normal distribution (cumulative, exceedance)
-y_norm = np.linspace(0, price.Price.max(), 50)
-x_norm = (1-sp.norm(price_duration.Price.mean(), price_duration.Price.std()).cdf(y_norm))*100
+y_norm = np.linspace(0, price_duration.Price.max(), 50)
+x_norm = sp.stats.norm(price_duration.Price.mean(), price_duration.Price.std()).sf(y_norm)*100 # survival function
 
 # print price-duration data and curve fitting
 plt.scatter(price_duration.Frequency, price_duration.Price)
 plt.xlim([0,price_duration.Frequency.max()])
 plt.ylim([0,price_duration.Price.max()])
-plt.plot(x_norm, y_norm, 'cyan', label = 'Normal Dist.') # normal dist. plot
+plt.plot(x_norm, y_norm, 'cyan', label = 'Normal Dist.', linewidth=2) # normal dist. plot
 plt.plot(x_new, y_new, 'r', label = 'Curve fit') # curve fit plot
 plt.ylabel('hourly price $/MWh', fontsize = 14)
 plt.xlabel('duration %', fontsize = 14)
@@ -125,22 +125,22 @@ for item,x in enumerate(price_duration.Frequency):
         H_G = x
         
 #for item,x in enumerate(price_duration.Frequency):
-#    if (sp.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100) + (sp.norm(price.Price.mean(), price.Price.std()).cdf(x)*100) >= 100: # total hour % can't exceed 100%
+#    if (sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100) + (sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(x)*100) >= 100: # total hour % can't exceed 100%
 #        break
-#    if round((sp.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100)/(sp.norm(price.Price.mean(), price.Price.std()).cdf(x)*100),3) == round(e_g * e_p,2):
+#    if round((sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100)/(sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(x)*100),3) == round(e_g * e_p,2):
 #        H_G = x
 		
-print('Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours')
-
 plt.axvline(x=H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='k', label = 'Generate Power')
 plt.axvline(x=price_duration.Frequency.max()-H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='b', label = 'Pump')
-plt.legend(fontsize = 11, loc=9)
-plt.text(0.5,270, 'Generating Hours', color = 'k')
-plt.text(79,270, 'Pumping Hours', color = 'b')
-plt.text(25,150, 'Generating Price Threshold >= ' + str(round(f(H_G),2)) + ' $/MWh', fontsize = 11)
-plt.text(25,125, 'Pumping Price Threshold <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', fontsize = 11)
+plt.legend(fontsize = 12, loc=9)
+plt.text(H_G-3,(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours', color = 'k', rotation = 'vertical')
+plt.text(price_duration.Frequency.max()-H_G+1,(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours', color = 'b', rotation = 'vertical')
+plt.text(25,(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Price Threshold >= ' + str(round(f(H_G),2)) + ' $/MWh', fontsize = 11)
+plt.text(25,(price_duration.Price.max()+price_duration.Price.min())/2-12, 'Pumping Price Threshold <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', fontsize = 11)
 plt.savefig("figure_pd.pdf")
 plt.show()
+
+print('Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours')
 
 # create time-series plot
 # NOT WORKING!!! Time-series data is not in correct order!!! 
