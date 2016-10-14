@@ -50,15 +50,6 @@ def dur_curve(load, duration, time_period):
     price_duration = pd.DataFrame(pdur.T, columns = col, dtype = 'float')
     name = 'price_duration_' + str(time_period) + '.csv'
     price_duration.to_csv(name)    
-    
-    plt.figure()
-    plt.scatter(prob,data)
-    plt.ylabel('Price')
-    plt.xlabel('Duration (%)')
-    plt.ylim([0,max(data)+10])
-    plt.xlim([0,100])
-    plt.title('Hourly Price-Duration Curve for ' + str(time_period))
-    plt.show()
     return
 
 # Load Price data from OASIS (CAISO) http://oasis.caiso.com/mrioasis/logon.do
@@ -90,5 +81,3 @@ print(dur_curve(Date_Price, 'Monthly', 'Jul')) # monthly example
 Date_Price.to_csv('price.csv')
 
 ##*****************************************************************************
-
-
