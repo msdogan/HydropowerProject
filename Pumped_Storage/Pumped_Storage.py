@@ -10,6 +10,7 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
+from scipy.optimize import differential_evolution
 import pandas as pd
 import seaborn as sns
 sns.set_style('whitegrid')
@@ -42,7 +43,7 @@ def dur_curve(load, duration, time_period):
     # after determining what duration and time period to use, create price-duration data
     data = np.sort(data_raw) # sort data
     rank = sp.stats.rankdata(data, method='average') # calculate the rank
-    rank = rank[::-1] # non-exceedance prob. Comment out to get exceedance prob
+    rank = rank[::-1] 
     prob = [100*(rank[i]/(len(data)+1)) for i in range(len(data))] # frequency data
     
     # save price-duration data
@@ -94,20 +95,86 @@ price_duration = dur_curve(price, duration, time)
 price.to_csv('price.csv')
 
 ##*****************************************************************************
+# Equations
+# power_hydro (Watt) = e * g (m/s2) * rho (kg/m3) * Q (m3/s) * head (m)
+# power_pump (Watt) = 1/e * g (m/s2) * rho (kg/m3) * Q (m3/s) * head (m)
+# generation (Wh) = power (Watt) * hour (h) = 1/(10**6) (MWh)
+# revenue ($) = generation (MWh) * price ($/MWh)
 
+# parameters
 e_g = 0.85 # generation efficiency
 e_p = 0.80 # pumping efficiency
+g = 9.81 # m/s2 - acceleration of gravity
+rho = 1000 # kg/m3 - density of water
+Q_g = 100 # m3/s - water flow for turbine
+Q_p = 100 # m3/s - water flow for pumping
+head_g = 100 # m - generating head    
+head_p = 100 # m - pumping head
+
+# objective function to maximize - continuous function
+def obj_func_cont(xx, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = True):
+    H_T = int(price_duration.Frequency.max()) # total duration (100%)
+    x1 = np.arange(0,xx)
+    y1 = f(x1)
+    x2 = np.arange(H_T-xx,H_T)
+    y2 = f(x2)
+    Power_Revenue = np.trapz(y1, x1, dx=0.1, axis = -1)*e_g*rho*g*Q_g*head_g/(10**6)
+    Pumping_Cost = np.trapz(y2, x2, dx=0.1, axis = -1)/e_p*rho*g*Q_p*head_p/(10**6)   
+    z = Power_Revenue - Pumping_Cost # profit
+    return -z if optimizing else z
+
+# objective function to maximize - discrete
+def obj_func_disc(xx, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = True):
+    dH = 0.1 # discretization level
+    H_T = int(price_duration.Frequency.max()) # total duration (100%)
+    Power_Revenue = 0
+    for gen_H in np.arange(0,xx,dH):
+        Power_Revenue += f(gen_H)*e_g*rho*g*Q_g*head_g*dH/(10**6)
+    Pumping_Cost = 0
+    for pump_H in np.arange(H_T-xx,H_T,dH):
+        Pumping_Cost += f(pump_H)/e_p*rho*g*Q_p*head_p*dH/(10**6)
+    z = Power_Revenue - Pumping_Cost # profit
+    return -z if optimizing else z
+   
+## objective function to maximize - discrete, no curve fitting
+def obj_func_disc_nofit(xx, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = True):
+    H_T = int(price_duration.Frequency.max()) # total duration (100%)
+    prc_g, prc_p, freq_g, freq_p = [],[],[],[]       
+    for i,x in enumerate(price_duration.Frequency):
+        if x < xx: # Power Generation price and duration
+            prc_g.append(price_duration.Price[i]), freq_g.append(x)
+        if H_T - xx < x < H_T: # Pumping price and duration
+            prc_p.append(price_duration.Price[i]), freq_p.append(x)  
+    prc_g = np.array(prc_g) # generation price
+    prc_p = np.array(prc_p) # pumping price
+    freq_g = np.array(freq_g) # generation duration
+    freq_p = np.array(freq_p) # pumping duration
+    # Use numerical integration to integrate (Trapezoidal rule)
+    Power_Revenue = np.trapz(prc_g, freq_g, dx=0.1, axis = -1)*e_g*rho*g*Q_g*head_g/(10**6)
+    Pumping_Cost = np.trapz(prc_p, freq_p, dx=0.1, axis = -1)/e_p*rho*g*Q_p*head_p/(10**6)   
+    z = Power_Revenue - Pumping_Cost # profit
+    return z if optimizing else -z
 
 # fit a curve
 z = np.polyfit(price_duration.Frequency, price_duration.Price, 9)
 f = np.poly1d(z)
-
 x_new = np.linspace(0, price_duration.Frequency.max(), 50)
 y_new = f(x_new)
 
 # normal distribution (cumulative, exceedance)
 y_norm = np.linspace(0, price_duration.Price.max(), 50)
 x_norm = sp.stats.norm(price_duration.Price.mean(), price_duration.Price.std()).sf(y_norm)*100 # survival function
+
+# Reduced Analytical solution without integration: e_g * e_p = P(1-H_G)/P(H_G) 
+#for i,item in enumerate(price_duration.Frequency):
+#    if f(item) >= f(price_duration.Frequency.max()-item): # total proability cannot exceed 1 (100%)
+#        if round(f(price_duration.Frequency.max()-item)/f(item),2) == round(e_g * e_p,2):
+#            H_G = item
+
+# differential evolution
+result = differential_evolution(obj_func_disc_nofit, bounds=[(0,100)], args = (e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p), maxiter=1000, seed = 1)
+print(result)
+H_G = result.x
 
 # print price-duration data and curve fitting
 plt.scatter(price_duration.Frequency, price_duration.Price)
@@ -119,28 +186,34 @@ plt.ylabel('hourly price $/MWh', fontsize = 14)
 plt.xlabel('duration %', fontsize = 14)
 plt.title('Optimal Generating and Pumping Hours for ' + str(time), fontsize = 16)
 plt.grid(False)
-
-for item,x in enumerate(price_duration.Frequency):
-    if round(f(price_duration.Frequency.max()-x)/f(x),2) == round(e_g * e_p,2):
-        H_G = x
-        
-#for item,x in enumerate(price_duration.Frequency):
-#    if (sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100) + (sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(x)*100) >= 100: # total hour % can't exceed 100%
-#        break
-#    if round((sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(price_duration.Frequency.max()-x)*100)/(sp.stats.norm(price.Price.mean(), price.Price.std()).cdf(x)*100),3) == round(e_g * e_p,2):
-#        H_G = x
-		
-plt.axvline(x=H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='k', label = 'Generate Power')
-plt.axvline(x=price_duration.Frequency.max()-H_G, ymin=0, ymax = price_duration.Price.max(), linewidth=2, color='b', label = 'Pump')
+         
+plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power')
+plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump')
 plt.legend(fontsize = 12, loc=9)
-plt.text(H_G-3,(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours', color = 'k', rotation = 'vertical')
-plt.text(price_duration.Frequency.max()-H_G+1,(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours', color = 'b', rotation = 'vertical')
-plt.text(25,(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Price Threshold >= ' + str(round(f(H_G),2)) + ' $/MWh', fontsize = 11)
-plt.text(25,(price_duration.Price.max()+price_duration.Price.min())/2-12, 'Pumping Price Threshold <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', fontsize = 11)
+plt.text(H_G-3,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
+plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
 plt.savefig("figure_pd.pdf")
 plt.show()
 
-print('Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours')
+print('*******Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours*******')
+
+# enumeration
+enum_h = np.arange(0, 100, 1)
+simulation =np.zeros(len(enum_h))
+for i,item in enumerate(enum_h):
+    simulation[i] = obj_func_cont(item, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = False)
+index = np.where(simulation == simulation.max())[0]
+
+plt.plot(enum_h, simulation, label = 'Net Profit (Gen-Pump)')
+plt.axvline(x=enum_h[index], linewidth=2, color='k', label = 'Opt Gen. Duration')
+plt.title('Enumeration Line for ' + str(time), fontsize = 16)
+plt.xlabel('duration %', fontsize = 14)
+plt.ylabel('profit $/hour', fontsize = 14)
+plt.legend(fontsize = 12, loc=1)
+plt.grid(False)
+plt.savefig("figure_enum.pdf")
+plt.show
+
 
 # create time-series plot
 # NOT WORKING!!! Time-series data is not in correct order!!! 

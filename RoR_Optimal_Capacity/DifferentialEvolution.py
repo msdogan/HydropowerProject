@@ -51,6 +51,7 @@ def NPV(rho,g,eff,H,q_process,delta_t,p,Q,a,b):
   NPVal = PV[0] - cost(a, b, Q)
   return NPVal
 
+# check the function, it does not look right!!!
 def lognorm_pdf(x,mean,std):
   dist_pdf = lognorm.pdf(x,std,0,mean)
   return dist_pdf
