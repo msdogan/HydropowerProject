@@ -53,19 +53,16 @@ def dur_curve(load, duration, time_period):
                        ehour.append(load.End_Hour[i])
     else:
         print('please define correct duration and/or time period')
-        return
-        
+        return  
     prc_data = [[],[],[],[],[],[]]
     prc_data[0],prc_data[1],prc_data[2],prc_data[3],prc_data[4],prc_data[5]=year,month,day,shour,ehour,data_raw
     prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort(columns = ['Year', 'Month', 'Day', 'Start_Hour'])
     prc_ordered.to_csv('prc_ordered.csv', index=False, header=True)
-            
     # after determining what duration and time period to use, create price-duration data
     data = np.sort(data_raw) # sort data
     rank = sp.stats.rankdata(data, method='average') # calculate the rank
     rank = rank[::-1] 
     prob = [100*(rank[i]/(len(data)+1)) for i in range(len(data))] # frequency data
-    
     # save price-duration data
     col = ['Price', 'Frequency']
     pdur = [[],[]]
@@ -103,15 +100,14 @@ price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to 
 #time = '2016'
 
 # Monthly Duration and Time
-duration = 'Monthly'
-time = 'Aug'
+#duration = 'Monthly'
+#time = 'Aug'
 
 # Daily Duration and Time
-#duration = 'Daily'
-#time = '2016-9-11'
+duration = 'Daily'
+time = '2016-9-11'
 
 price_duration, prc_ordered = dur_curve(price, duration, time)
-
 price.to_csv('price.csv')
 
 ##*****************************************************************************
@@ -187,13 +183,13 @@ x_norm = sp.stats.norm(price_duration.Price.mean(), price_duration.Price.std()).
 
 # Reduced Analytical solution without integration: e_g * e_p = P(1-H_G)/P(H_G) 
 #for i,item in enumerate(price_duration.Frequency):
-#    if f(item) >= f(price_duration.Frequency.max()-item): # total proability cannot exceed 1 (100%)
+#    if (item + (price_duration.Frequency.max()-item)) <= 100: # total proability cannot exceed 1 (100%)
 #        if round(f(price_duration.Frequency.max()-item)/f(item),2) == round(e_g * e_p,2):
 #            H_G = item
+#            print(H_G)
 
 # differential evolution
 result = differential_evolution(obj_func_disc_nofit, bounds=[(0,100)], args = (e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p), maxiter=1000, seed = 1)
-print(result)
 H_G = result.x
 
 # print price-duration data and curve fitting
@@ -205,13 +201,12 @@ plt.plot(x_new, y_new, 'r', label = 'Curve fit') # curve fit plot
 plt.ylabel('hourly price $/MWh', fontsize = 14)
 plt.xlabel('duration %', fontsize = 14)
 plt.title('Optimal Generating and Pumping Hours for ' + str(time), fontsize = 16)
-plt.grid(False)
-         
+plt.grid(False)    
 plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
 plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
-plt.text(H_G-3,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
-plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
+plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
+plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
 plt.savefig("figure_pd.pdf")
 plt.show()
 
@@ -223,7 +218,6 @@ simulation =np.zeros(len(enum_h))
 for i,item in enumerate(enum_h):
     simulation[i] = obj_func_cont(item, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = False)
 index = np.where(simulation == simulation.max())[0]
-
 plt.plot(enum_h, simulation, label = 'Net Profit (Gen-Pump)')
 plt.axhline(y=0, linewidth=0.5, color='k')
 plt.annotate('max', xy=(enum_h[index],simulation.max()), xytext=(enum_h[index],simulation.max()), arrowprops=dict(facecolor='black', shrink=0.5), fontsize = 12)
@@ -237,7 +231,7 @@ plt.show()
 
 # plot time-series data
 plot_prc = [prc_ordered.Price[i] for i in range(len(prc_ordered.Price))]
-plt.plot(plot_prc, linewidth=0.5, color='b', label = 'Hourly Price')
+plt.plot(plot_prc, linewidth=0.5, color='b', label = 'Hourly Price') # use "marker = 'o'" to see points
 plt.axhline(y=f(H_G), linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
 plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='red', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
@@ -249,3 +243,4 @@ plt.xlabel('hours', fontsize = 14)
 plt.savefig("figure_ts.pdf")
 plt.show()
 
+print(result) # show EA solver message
