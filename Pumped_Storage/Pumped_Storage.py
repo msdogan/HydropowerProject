@@ -19,27 +19,47 @@ sns.set_style('whitegrid')
 ##*****************************************************************************
 # this function creates price-duration curves
 def dur_curve(load, duration, time_period):
-    data_raw = [] # empty list to store temporary data
+    data_raw, year, month, day, shour, ehour = [],[],[],[],[],[]
     if duration == 'Monthly':
-        month = months.index(time_period) + 1 # python starts from index 0
+        c_month = months.index(time_period) + 1 # python starts from index 0
         for i in range(len(load)):
-            if load.Month[i] == month: # Unit is $/MWh
-                data_raw.append(load.Price[i])                
+            if load.Month[i] == c_month: # Unit is $/MWh
+                data_raw.append(load.Price[i])
+                year.append(load.Year[i])
+                month.append(load.Month[i])
+                day.append(load.Day[i])
+                shour.append(load.Start_Hour[i])
+                ehour.append(load.End_Hour[i])
     elif duration == 'Annual':
         for i in range(len(load)):
             if load.Year[i] == float(time_period): # Unit is $/MWh
-                data_raw.append(load.Price[i])                
+                data_raw.append(load.Price[i])
+                year.append(load.Year[i])
+                month.append(load.Month[i])
+                day.append(load.Day[i])
+                shour.append(load.Start_Hour[i]) 
+                ehour.append(load.End_Hour[i])
     elif duration == 'Daily': # does not work for now
         y,m,d = time_period.split("-") # year, month, day
         for i in range(len(load)):
             if load.Year[i] == float(y):
                 if load.Month[i] == float(m):
                     if load.Day[i] == float(d):
-                        data_raw.append(load.Price[i])                
+                       data_raw.append(load.Price[i])
+                       year.append(load.Year[i])
+                       month.append(load.Month[i])
+                       day.append(load.Day[i])
+                       shour.append(load.Start_Hour[i])
+                       ehour.append(load.End_Hour[i])
     else:
         print('please define correct duration and/or time period')
         return
         
+    prc_data = [[],[],[],[],[],[]]
+    prc_data[0],prc_data[1],prc_data[2],prc_data[3],prc_data[4],prc_data[5]=year,month,day,shour,ehour,data_raw
+    prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort(columns = ['Year', 'Month', 'Day', 'Start_Hour'])
+    prc_ordered.to_csv('prc_ordered.csv', index=False, header=True)
+            
     # after determining what duration and time period to use, create price-duration data
     data = np.sort(data_raw) # sort data
     rank = sp.stats.rankdata(data, method='average') # calculate the rank
@@ -54,7 +74,7 @@ def dur_curve(load, duration, time_period):
     price_duration = pd.DataFrame(pdur.T, columns = col, dtype = 'float')
     s_name = 'price_duration_' + str(time_period) + '.csv'
     price_duration.to_csv(s_name)    
-    return price_duration
+    return price_duration, prc_ordered
 
 # Load Price data from OASIS (CAISO) http://oasis.caiso.com/mrioasis/logon.do
 name = 'PRC_LMP_DAM_2016.csv'
@@ -90,7 +110,7 @@ time = 'Aug'
 #duration = 'Daily'
 #time = '2016-9-11'
 
-price_duration = dur_curve(price, duration, time)
+price_duration, prc_ordered = dur_curve(price, duration, time)
 
 price.to_csv('price.csv')
 
@@ -103,7 +123,7 @@ price.to_csv('price.csv')
 
 # parameters
 e_g = 0.85 # generation efficiency
-e_p = 0.80 # pumping efficiency
+e_p = 0.85 # pumping efficiency
 g = 9.81 # m/s2 - acceleration of gravity
 rho = 1000 # kg/m3 - density of water
 Q_g = 100 # m3/s - water flow for turbine
@@ -187,8 +207,8 @@ plt.xlabel('duration %', fontsize = 14)
 plt.title('Optimal Generating and Pumping Hours for ' + str(time), fontsize = 16)
 plt.grid(False)
          
-plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power')
-plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump')
+plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
+plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
 plt.text(H_G-3,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
 plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.mean()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
@@ -198,32 +218,34 @@ plt.show()
 print('*******Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours*******')
 
 # enumeration
-enum_h = np.arange(0, 100, 1)
+enum_h = np.arange(price_duration.Frequency.min(), price_duration.Frequency.max(), 1)
 simulation =np.zeros(len(enum_h))
 for i,item in enumerate(enum_h):
     simulation[i] = obj_func_cont(item, e_g, e_p, g, rho, Q_g, Q_p, head_g, head_p, optimizing = False)
 index = np.where(simulation == simulation.max())[0]
 
 plt.plot(enum_h, simulation, label = 'Net Profit (Gen-Pump)')
-plt.axvline(x=enum_h[index], linewidth=2, color='k', label = 'Opt Gen. Duration')
+plt.axhline(y=0, linewidth=0.5, color='k')
+plt.annotate('max', xy=(enum_h[index],simulation.max()), xytext=(enum_h[index],simulation.max()), arrowprops=dict(facecolor='black', shrink=0.5), fontsize = 12)
 plt.title('Enumeration Line for ' + str(time), fontsize = 16)
 plt.xlabel('duration %', fontsize = 14)
 plt.ylabel('profit $/hour', fontsize = 14)
 plt.legend(fontsize = 12, loc=1)
 plt.grid(False)
 plt.savefig("figure_enum.pdf")
-plt.show
+plt.show()
 
-
-# create time-series plot
-# NOT WORKING!!! Time-series data is not in correct order!!! 
-#price.Price.plot(linewidth=0.75)
-#plt.axhline(y=f(H_G), linewidth=2, color='k', label = 'Generate Power')
-#plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='red', label = 'Pump')
-#plt.legend(fontsize = 11, loc=9)
-#plt.grid(False)
-#plt.ylabel('hourly price $/MWh', fontsize = 14)
-#plt.xlabel('hours', fontsize = 14)
-#plt.savefig("figure_ts.pdf")
-#plt.show()
+# plot time-series data
+plot_prc = [prc_ordered.Price[i] for i in range(len(prc_ordered.Price))]
+plt.plot(plot_prc, linewidth=0.5, color='b', label = 'Hourly Price')
+plt.axhline(y=f(H_G), linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
+plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='red', label = 'Pump', linestyle = 'dashed')
+plt.legend(fontsize = 12, loc=9)
+plt.xlim([0,len(prc_ordered.Price)])
+plt.grid(False)
+plt.title('Hourly Price Time-series for ' + str(time), fontsize = 16)
+plt.ylabel('hourly price $/MWh', fontsize = 14)
+plt.xlabel('hours', fontsize = 14)
+plt.savefig("figure_ts.pdf")
+plt.show()
 
