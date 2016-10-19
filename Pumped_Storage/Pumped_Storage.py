@@ -108,7 +108,6 @@ duration = 'Daily'
 time = '2016-9-11'
 
 price_duration, prc_ordered = dur_curve(price, duration, time)
-price.to_csv('price.csv')
 
 ##*****************************************************************************
 # Equations
