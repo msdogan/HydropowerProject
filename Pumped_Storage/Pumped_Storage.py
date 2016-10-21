@@ -105,7 +105,7 @@ price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to 
 
 # Daily Duration and Time
 duration = 'Daily'
-time = '2016-9-11'
+time = '2016-7-12'
 
 price_duration, prc_ordered = dur_curve(price, duration, time)
 
@@ -117,8 +117,8 @@ price_duration, prc_ordered = dur_curve(price, duration, time)
 # revenue ($) = generation (MWh) * price ($/MWh)
 
 # parameters
-e_g = 0.85 # generation efficiency
-e_p = 0.85 # pumping efficiency
+e_g = 1 # generation efficiency
+e_p = 1 # pumping efficiency
 g = 9.81 # m/s2 - acceleration of gravity
 rho = 1000 # kg/m3 - density of water
 Q_g = 100 # m3/s - water flow for turbine
@@ -204,9 +204,9 @@ plt.grid(False)
 plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
 plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
-plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
-plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
-plt.savefig("figure_pd.pdf")
+plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
+plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
+plt.savefig('figure_pd_'+str(time)+'.pdf')
 plt.show()
 
 print('*******Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours*******')
@@ -225,7 +225,7 @@ plt.xlabel('duration %', fontsize = 14)
 plt.ylabel('profit $/hour', fontsize = 14)
 plt.legend(fontsize = 12, loc=1)
 plt.grid(False)
-plt.savefig("figure_enum.pdf")
+plt.savefig('figure_enum_'+str(time)+'.pdf')
 plt.show()
 
 # plot time-series data
@@ -239,7 +239,7 @@ plt.grid(False)
 plt.title('Hourly Price Time-series for ' + str(time), fontsize = 16)
 plt.ylabel('hourly price $/MWh', fontsize = 14)
 plt.xlabel('hours', fontsize = 14)
-plt.savefig("figure_ts.pdf")
+plt.savefig('figure_ts_'+str(time)+'.pdf')
 plt.show()
 
 print(result) # show EA solver message

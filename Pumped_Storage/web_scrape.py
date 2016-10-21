@@ -25,9 +25,9 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep','Oct', '
 
 # enter starting and ending year and month that you want to download
 # the code below downloads all hourly price data for months you specified
-s_year = 2010 # starting year
-e_year = 2010 # ending year
-s_month = 9 # starting month
+s_year = 2011 # starting year
+e_year = 2016 # ending year
+s_month = 1 # starting month
 e_month = 9 # ending month
 
 # let the code do its magic
@@ -42,7 +42,7 @@ while t <= ((e_year-s_year)*12 + (e_month-s_month)):
     else:
         cm = i
     de = [10,20,n_days[months[i-1]]]
-    for x,item in enumerate(de):
+    for x,item in enumerate(de): # download 10 day data
         startdatetime = str(str(y) + str(cm) + str(ds[x]) + 'T00:00-0000') # start time
         enddatetime = str(str(y) + str(cm) + str(item) + 'T00:00-0000') # end time
         url_all = api_name + 'queryname=' + queryname + '&' + 'startdatetime=' + startdatetime + '&' + 'enddatetime=' + enddatetime + '&' + 'version=1' + '&' +  'market_run_id=' + market_run_id + '&' + 'grp_type=' + grp_type + '&' + 'resultformat=' + resultformat
