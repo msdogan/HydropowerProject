@@ -117,8 +117,8 @@ price_duration, prc_ordered = dur_curve(price, duration, time)
 # revenue ($) = generation (MWh) * price ($/MWh)
 
 # parameters
-e_g = 1 # generation efficiency
-e_p = 1 # pumping efficiency
+e_g = 0.85 # generation efficiency
+e_p = 0.85 # pumping efficiency
 g = 9.81 # m/s2 - acceleration of gravity
 rho = 1000 # kg/m3 - density of water
 Q_g = 100 # m3/s - water flow for turbine
