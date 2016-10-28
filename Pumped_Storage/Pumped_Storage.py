@@ -19,45 +19,44 @@ sns.set_style('whitegrid')
 ##*****************************************************************************
 # this function creates price-duration curves
 def dur_curve(load, duration, time_period):
-    data_raw, year, month, day, shour, ehour = [],[],[],[],[],[]
+    data_raw, INTERVALSTARTTIME_GMT, INTERVALENDTIME_GMT, OPR_DT, OPR_HR = [],[],[],[],[]
     if duration == 'Monthly':
         c_month = months.index(time_period) + 1 # python starts from index 0
         for i in range(len(load)):
-            if load.Month[i] == c_month: # Unit is $/MWh
+            if load.OPR_DT[i].split('-')[1] == c_month:
                 data_raw.append(load.Price[i])
-                year.append(load.Year[i])
-                month.append(load.Month[i])
-                day.append(load.Day[i])
-                shour.append(load.Start_Hour[i])
-                ehour.append(load.End_Hour[i])
+                INTERVALSTARTTIME_GMT.append(load.INTERVALSTARTTIME_GMT[i])
+                INTERVALENDTIME_GMT.append(load.INTERVALENDTIME_GMT[i])
+                OPR_DT.append(load.OPR_DT[i])
+                OPR_HR.append(load.OPR_HR[i])
     elif duration == 'Annual':
         for i in range(len(load)):
-            if load.Year[i] == float(time_period): # Unit is $/MWh
+            if load.OPR_DT[i].split('-')[0] == time_period: # Unit is $/MWh
                 data_raw.append(load.Price[i])
-                year.append(load.Year[i])
-                month.append(load.Month[i])
-                day.append(load.Day[i])
-                shour.append(load.Start_Hour[i]) 
-                ehour.append(load.End_Hour[i])
-    elif duration == 'Daily': # does not work for now
+                INTERVALSTARTTIME_GMT.append(load.INTERVALSTARTTIME_GMT[i])
+                INTERVALENDTIME_GMT.append(load.INTERVALENDTIME_GMT[i])
+                OPR_DT.append(load.OPR_DT[i])
+                OPR_HR.append(load.OPR_HR[i]) 
+    elif duration == 'Daily': # does not work for now     
         y,m,d = time_period.split("-") # year, month, day
         for i in range(len(load)):
-            if load.Year[i] == float(y):
-                if load.Month[i] == float(m):
-                    if load.Day[i] == float(d):
+            if load.OPR_DT[i].split('-')[0] == y:
+                if load.OPR_DT[i].split('-')[1] == m:
+                    if load.OPR_DT[i].split('-')[2] == d:
                        data_raw.append(load.Price[i])
-                       year.append(load.Year[i])
-                       month.append(load.Month[i])
-                       day.append(load.Day[i])
-                       shour.append(load.Start_Hour[i])
-                       ehour.append(load.End_Hour[i])
+                       INTERVALSTARTTIME_GMT.append(load.INTERVALSTARTTIME_GMT[i])
+                       INTERVALENDTIME_GMT.append(load.INTERVALENDTIME_GMT[i])
+                       OPR_DT.append(load.OPR_DT[i])
+                       OPR_HR.append(load.OPR_HR[i])
+                       
     else:
         print('please define correct duration and/or time period')
         return  
-    prc_data = [[],[],[],[],[],[]]
-    prc_data[0],prc_data[1],prc_data[2],prc_data[3],prc_data[4],prc_data[5]=year,month,day,shour,ehour,data_raw
-    prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort(columns = ['Year', 'Month', 'Day', 'Start_Hour'])
-    prc_ordered.to_csv('prc_ordered.csv', index=False, header=True)
+    prc_data = [[],[],[],[],[]]
+    prc_data[0],prc_data[1],prc_data[2],prc_data[3],prc_data[4]=INTERVALSTARTTIME_GMT,INTERVALENDTIME_GMT,OPR_DT,OPR_HR,data_raw
+    prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort(columns = ['INTERVALSTARTTIME_GMT'])
+    s_name = 'price_ordered_' + str(time_period) + '.csv'    
+    prc_ordered.to_csv(s_name, index=False, header=True)
     # after determining what duration and time period to use, create price-duration data
     data = np.sort(data_raw) # sort data
     rank = sp.stats.rankdata(data, method='average') # calculate the rank
@@ -74,25 +73,24 @@ def dur_curve(load, duration, time_period):
     return price_duration, prc_ordered
 
 # Load Price data from OASIS (CAISO) http://oasis.caiso.com/mrioasis/logon.do
-name = 'PRC_LMP_DAM_2016.csv'
-df = pd.read_csv(name, parse_dates=True).sort(columns= 'INTERVALSTARTTIME_GMT') # read data and sort by time (gmt)
+name = 'PRC_HASP_LMP.csv'
+df = pd.read_csv(name, parse_dates=True) # read data and sort by time (gmt)
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep','Oct', 'Nov', 'Dec']
 
-P = [[],[],[],[],[],[]] # empty list to store required data
-columns = ['Year', 'Month', 'Day', 'Start_Hour', 'End_Hour', 'Price'] # headers for data frame
+P = [[],[],[],[],[]] # empty list to store required data
+columns = ['INTERVALSTARTTIME_GMT', 'INTERVALENDTIME_GMT', 'OPR_DT', 'OPR_HR', 'Price'] # headers for data frame
 
 # We are only interested in , start time, end time and LMP
 for i in range(len(df)):
     if df.LMP_TYPE[i] == "LMP": # Unit is $/MWh
-        P[0].append(df.INTERVALSTARTTIME_GMT[i].split("T")[0].split("-")[0])
-        P[1].append(df.INTERVALSTARTTIME_GMT[i].split("T")[0].split("-")[1])
-        P[2].append(df.INTERVALSTARTTIME_GMT[i].split("T")[0].split("-")[2])
-        P[3].append(df.INTERVALSTARTTIME_GMT[i].split("T")[1].split("-")[0].split(":")[0])
-        P[4].append(df.INTERVALENDTIME_GMT[i].split("T")[1].split("-")[0].split(":")[0])
-        P[5].append(df.MW[i])
+        P[0].append(df.INTERVALSTARTTIME_GMT[i]) # GMT start
+        P[1].append(df.INTERVALENDTIME_GMT[i]) # GMT end
+        P[2].append(df.OPR_DT[i]) # OPR Date
+        P[3].append(df.OPR_HR[i]) # OPR hour
+        P[4].append(df.MW[i]) # price $/MWh
  
 P = np.array(P) # convert list to numpy array    
-price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to data frame
+price = pd.DataFrame(P.T, columns = columns) # convert list to data frame
 
 # Examples of 'dur_curve' function use
 # Annual Duration and Time
@@ -105,7 +103,7 @@ price = pd.DataFrame(P.T, columns = columns, dtype = 'float') # convert list to 
 
 # Daily Duration and Time
 duration = 'Daily'
-time = '2016-9-11'
+time = '2016-09-12'
 
 price_duration, prc_ordered = dur_curve(price, duration, time)
 
@@ -197,19 +195,17 @@ plt.xlim([0,price_duration.Frequency.max()])
 plt.ylim([0,price_duration.Price.max()])
 plt.plot(x_norm, y_norm, 'cyan', label = 'Normal Dist.', linewidth=2) # normal dist. plot
 plt.plot(x_new, y_new, 'r', label = 'Curve fit') # curve fit plot
-plt.ylabel('hourly price $/MWh', fontsize = 14)
+plt.ylabel('15 min price $/MWh', fontsize = 14)
 plt.xlabel('duration %', fontsize = 14)
 plt.title('Optimal Generating and Pumping Hours for ' + str(time), fontsize = 16)
 plt.grid(False)    
 plt.axvline(x=H_G, linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
 plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
-plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
-plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/2, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
-plt.savefig("figure_pd.pdf")
+plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
+plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
+plt.savefig('figure_pd_'+str(time)+'.pdf')
 plt.show()
-
-print('*******Optimal Operation at '+ str(round(H_G,2)) + ' % of Total Hours*******')
 
 # enumeration
 enum_h = np.arange(price_duration.Frequency.min(), price_duration.Frequency.max(), 1)
@@ -225,21 +221,24 @@ plt.xlabel('duration %', fontsize = 14)
 plt.ylabel('profit $/hour', fontsize = 14)
 plt.legend(fontsize = 12, loc=1)
 plt.grid(False)
-plt.savefig("figure_enum.pdf")
+plt.savefig('figure_enum_'+str(time)+'.pdf')
 plt.show()
 
 # plot time-series data
-plot_prc = [prc_ordered.Price[i] for i in range(len(prc_ordered.Price))]
+prc = np.array(prc_ordered.Price)
+plot_prc = [prc[i] for i in range(len(prc_ordered.Price))]
 plt.plot(plot_prc, linewidth=0.5, color='b', label = 'Hourly Price') # use "marker = 'o'" to see points
 plt.axhline(y=f(H_G), linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
 plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='red', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
 plt.xlim([0,len(prc_ordered.Price)])
 plt.grid(False)
-plt.title('Hourly Price Time-series for ' + str(time), fontsize = 16)
-plt.ylabel('hourly price $/MWh', fontsize = 14)
-plt.xlabel('hours', fontsize = 14)
-plt.savefig("figure_ts.pdf")
+plt.title('15 Min Price Time-series for ' + str(time), fontsize = 16)
+plt.ylabel('15 Min price $/MWh', fontsize = 14)
+plt.xlabel('15 min', fontsize = 14)
+plt.savefig('figure_ts_'+str(time)+'.pdf')
 plt.show()
 
 print(result) # show EA solver message
+print('')
+print('*******Optimal Operation at '+ str(round(H_G,2)) + ' % of Total 15 minutes*******')
