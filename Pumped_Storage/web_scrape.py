@@ -30,9 +30,9 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep','Oct', '
 
 # enter starting and ending year and month that you want to download
 # the code below downloads all hourly price data for months you specified
-s_year = 2013 # starting year
+s_year = 2015 # starting year
 e_year = 2016 # ending year
-s_month = 9 # starting month
+s_month = 8 # starting month
 e_month = 9 # ending month
 
 # let the code do its magic
