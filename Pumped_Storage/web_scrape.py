@@ -19,8 +19,11 @@ grp_type = 'ALL_APNODES' # you can also put node names - Note: file size gets to
 resultformat = '6' # this downloads as csv
 single_api_name = 'http://oasis.caiso.com/oasisapi/SingleZip?'
 group_api_name = 'http://oasis.caiso.com/oasisapi/GroupZip?'
-node = ['WSCRMNO_1_N201'] # enter node names you want to download
+node = ['DAVIS_1_N030'] # enter node names you want to download
 # look at node names from http://www.caiso.com/pages/pricemaps.aspx
+# Examples nodes:
+# 'WSCRMNO_1_N201' , Node Type: LOAD, Location: West Sac
+# 'DAVIS_1_N030' , Node Type: GEN, Location: Davis
 
 # group url building. returns only 1 hour of data
 #url_group = group_api_name + 'groupid=' + group_id + '&' + 'startdatetime=' + startdatetime + '&' + 'enddatetime=' + enddatetime + '&' + 'version=1' + '&' + 'grp_type=' + grp_type + '&' + 'resultformat=' + resultformat
@@ -51,7 +54,7 @@ for n in range(len(node)):
         for x,day in enumerate(ds):
             startdatetime = str(str(y) + str(sm) + str(ds[x]) + 'T00:00-0000') # start time 
             enddatetime = str(str(y) + str(sm) + str(de[x]) + 'T00:00-0000') # end time 
-            url_single = single_api_name+'queryname='+queryname +'&'+'startdatetime='+startdatetime+'&'+'enddatetime='+enddatetime +'&'+'version=1'+'&'+'market_run_id='+market_run_id +'&'+'node='+node[n]+'&'+'resultformat='+resultformatstatus = 0 
+            url_single = single_api_name+'queryname='+queryname +'&'+'startdatetime='+startdatetime+'&'+'enddatetime='+enddatetime +'&'+'version=1'+'&'+'market_run_id='+market_run_id +'&'+'node='+node[n]+'&'+'resultformat='+resultformat 
             print('now downloading: ' + startdatetime, enddatetime)
             r = requests.get(url_single, stream=True, verify=False, timeout=500) # request price data, single or all
             z = zipfile.ZipFile(StringIO.StringIO(r.content)) # url request returns a zip file
