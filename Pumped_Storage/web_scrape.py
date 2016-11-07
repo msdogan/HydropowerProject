@@ -30,10 +30,10 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep','Oct', '
 
 # enter starting and ending year and month that you want to download
 # the code below downloads all hourly price data for months you specified
-s_year = 2013 # starting year
-e_year = 2013 # ending year
+s_year = 2011 # starting year
+e_year = 2016 # ending year
 s_month = 9 # starting month
-e_month = 9 # ending month
+e_month = 10 # ending month
 
 # let the code do its magic
 t = 0
@@ -41,25 +41,19 @@ y = s_year # beginning year
 m = s_month # beginning month
 i = s_month
 ds = ['01', '11', '21'] # divide a month into 10 days - starting day
-de = ['11', '21', '01'] # divide a month into 10 days - ending day
 for n in range(len(node)):
     while t <= ((e_year-s_year)*12+(e_month-s_month)): # retrieve 10 day period
         if i < 10:
-            sm = '0' + str(i) # starting month <10
-            em = '0' + str(i+1) # ending month <10
-            if i == 9:
-                 em = i + 1
+            sm = '0' + str(i) # starting smonth <10
         else:
             sm = i # starting month >10
-            em = i + 1 # ending month >10
+        de = ['11', '21', n_days[months[i-1]]] # divide a month into 10 days - ending day
         for x,day in enumerate(ds):
-            if x <= 1:
-                emm = sm
-            else:
-                emm = em
-            startdatetime = str(str(y) + str(sm) + str(ds[x]) + 'T07:00-0000') # start time 
-            enddatetime = str(str(y) + str(emm) + str(de[x]) + 'T07:00-0000') # end time 
-            url_single = single_api_name+'queryname='+queryname +'&'+'startdatetime='+startdatetime+'&'+'enddatetime='+enddatetime +'&'+'version=1'+'&'+'market_run_id='+market_run_id +'&'+'node='+node[n]+'&'+'resultformat='+resultformat
+            startdatetime = str(str(y) + str(sm) + str(ds[x]) + 'T00:00-0000') # start time 
+            enddatetime = str(str(y) + str(sm) + str(de[x]) + 'T00:00-0000') # end time 
+            url_single = (single_api_name+'queryname='+queryname +'&'+'startdatetime='
+            +startdatetime+'&'+'enddatetime='+enddatetime +'&'+'version=1'+'&'+'market_run_id='
+            +market_run_id +'&'+'node='+node[n]+'&'+'resultformat='+resultformat)
             status = 0 
             print('now downloading: ' + startdatetime, enddatetime)
             r = requests.get(url_single, stream=True, verify=False, timeout=500) # request price data, single or all
