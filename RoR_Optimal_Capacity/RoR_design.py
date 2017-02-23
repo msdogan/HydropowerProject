@@ -36,7 +36,7 @@ price = price / 100 # convert to $/kWh
 months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
 
 # method = 0 is Deterministic, method = 0 is Probabilistic
-method = 1
+method = 0
 
 # define cost and benefit functions
 def cost(a,b,Q):

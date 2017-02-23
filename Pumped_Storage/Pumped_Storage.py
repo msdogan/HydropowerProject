@@ -5,7 +5,7 @@ Created on Wed Oct 12 10:50:15 2016
 """
 # This code optimizes pump-storage hydropower facility operations. 
 # Mustafa Dogan
-### 10/12/2016
+### 02/22/2017
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
@@ -98,8 +98,8 @@ price = pd.DataFrame(P.T, columns = columns) # convert list to data frame
 #time = '2016'
 
 # Monthly Duration and Time
-#duration = 'Monthly'
-#time = 'Aug'
+# duration = 'Monthly'
+# time = 'Aug'
 
 # Daily Duration and Time
 duration = 'Daily'
@@ -115,7 +115,7 @@ price_duration, prc_ordered = dur_curve(price, duration, time)
 # revenue ($) = generation (MWh) * price ($/MWh)
 
 # parameters
-e_g = 0.85 # generation efficiency
+e_g = 0.90 # generation efficiency
 e_p = 0.85 # pumping efficiency
 g = 9.81 # m/s2 - acceleration of gravity
 rho = 1000 # kg/m3 - density of water
@@ -204,6 +204,9 @@ plt.axvline(x=price_duration.Frequency.max()-H_G, linewidth=2, color='b', label 
 plt.legend(fontsize = 12, loc=9)
 plt.text(H_G-3,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Generating Hours, >= ' + str(round(f(H_G),2)) + ' $/MWh', color = 'k', rotation = 'vertical')
 plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_duration.Price.max()+price_duration.Price.min())/4, 'Pumping Hours, <= ' + str(round(f(price_duration.Frequency.max()-H_G),2)) + ' $/MWh', color = 'b', rotation = 'vertical')
+plt.text(5,5,'Generate', fontsize = 15, color = 'k')
+plt.text(45,5,'Stop', fontsize = 15, color = 'r')
+plt.text(83,5,'Pump', fontsize = 15, color = 'b')
 plt.savefig('figure_pd_'+str(time)+'.pdf')
 plt.show()
 
@@ -224,18 +227,35 @@ plt.grid(False)
 plt.savefig('figure_enum_'+str(time)+'.pdf')
 plt.show()
 
-# plot time-series data
 prc = np.array(prc_ordered.Price)
+gen_prc = np.zeros(len(prc)) # generating price time-series
+pump_prc = np.zeros(len(prc)) # pumping price time-series
+plot_gen_prc = np.zeros(len(prc)) # this is only for plotting purposes
+for i,item in enumerate(prc):
+	if float(item) >= f(H_G):
+		gen_prc[i] = item # store generating price
+		plot_gen_prc[i] = float(max(prc))
+	if float(item) <= f(price_duration.Frequency.max()-H_G):
+		pump_prc[i] = item # store pumping price
+
+# # plot time-series data
 plot_prc = [prc[i] for i in range(len(prc_ordered.Price))]
-plt.plot(plot_prc, linewidth=0.5, color='b', label = 'Hourly Price') # use "marker = 'o'" to see points
+plt.bar(range(len(pump_prc)), pump_prc, align='center', color='b', label = 'Pumping Price', alpha=0.25)
+plt.bar(range(len(plot_gen_prc)), plot_gen_prc, align='center', color='k', label = 'Generating Price', alpha=0.25)
+plt.bar(range(len(gen_prc)), gen_prc, align='center', linewidth=0, color='white', alpha=1)
+plt.plot(plot_prc, linewidth=1.5, color='r', label = 'Hourly Price') # use "marker = 'o'" to see points
 plt.axhline(y=f(H_G), linewidth=2, color='k', label = 'Generate Power', linestyle = 'dashed')
-plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='red', label = 'Pump', linestyle = 'dashed')
+plt.axhline(y=f(price_duration.Frequency.max()-H_G), linewidth=2, color='b', label = 'Pump', linestyle = 'dashed')
 plt.legend(fontsize = 12, loc=9)
 plt.xlim([0,len(prc_ordered.Price)])
+plt.ylim([0,float(max(prc))])
 plt.grid(False)
 plt.title('15 Min Price Time-series for ' + str(time), fontsize = 16)
 plt.ylabel('15 Min price $/MWh', fontsize = 14)
 plt.xlabel('15 min', fontsize = 14)
+plt.text(5,32,'Generate', fontsize = 15, color = 'k')
+plt.text(5,26,'Stop', fontsize = 15,color = 'r')
+plt.text(5,20,'Pump', fontsize = 15, color = 'b')
 plt.savefig('figure_ts_'+str(time)+'.pdf')
 plt.show()
 
