@@ -54,7 +54,7 @@ def dur_curve(load, duration, time_period):
         return  
     prc_data = [[],[],[],[],[]]
     prc_data[0],prc_data[1],prc_data[2],prc_data[3],prc_data[4]=INTERVALSTARTTIME_GMT,INTERVALENDTIME_GMT,OPR_DT,OPR_HR,data_raw
-    prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort(columns = ['INTERVALSTARTTIME_GMT'])
+    prc_ordered = pd.DataFrame(np.array(prc_data).T, columns = columns).sort_values(['INTERVALSTARTTIME_GMT'])
     s_name = 'price_ordered_' + str(time_period) + '.csv'    
     prc_ordered.to_csv(s_name, index=False, header=True)
     # after determining what duration and time period to use, create price-duration data
@@ -103,7 +103,7 @@ price = pd.DataFrame(P.T, columns = columns) # convert list to data frame
 
 # Daily Duration and Time
 duration = 'Daily'
-time = '2016-09-12'
+time = '2016-09-01'
 
 price_duration, prc_ordered = dur_curve(price, duration, time)
 
@@ -207,7 +207,7 @@ plt.text(price_duration.Frequency.max()-H_G+1,price_duration.Price.min()+(price_
 plt.text(5,5,'Generate', fontsize = 15, color = 'k')
 plt.text(45,5,'Stop', fontsize = 15, color = 'r')
 plt.text(83,5,'Pump', fontsize = 15, color = 'b')
-plt.savefig('figure_pd_'+str(time)+'.pdf')
+plt.savefig('figure_pd_'+str(time)+'.pdf', transparent=True)
 plt.show()
 
 # enumeration
@@ -224,7 +224,7 @@ plt.xlabel('duration %', fontsize = 14)
 plt.ylabel('profit $/hour', fontsize = 14)
 plt.legend(fontsize = 12, loc=1)
 plt.grid(False)
-plt.savefig('figure_enum_'+str(time)+'.pdf')
+plt.savefig('figure_enum_'+str(time)+'.pdf', transparent=True)
 plt.show()
 
 prc = np.array(prc_ordered.Price)
@@ -253,10 +253,10 @@ plt.grid(False)
 plt.title('15 Min Price Time-series for ' + str(time), fontsize = 16)
 plt.ylabel('15 Min price $/MWh', fontsize = 14)
 plt.xlabel('15 min', fontsize = 14)
-plt.text(5,32,'Generate', fontsize = 15, color = 'k')
-plt.text(5,26,'Stop', fontsize = 15,color = 'r')
-plt.text(5,20,'Pump', fontsize = 15, color = 'b')
-plt.savefig('figure_ts_'+str(time)+'.pdf')
+plt.text(5,f(H_G)+1,'Generate', fontsize = 15, color = 'k')
+plt.text(5,(f(H_G)-f(price_duration.Frequency.max()-H_G))/2+f(price_duration.Frequency.max()-H_G),'Stop', fontsize = 15,color = 'r')
+plt.text(5,f(price_duration.Frequency.max()-H_G)-3,'Pump', fontsize = 15, color = 'b')
+plt.savefig('figure_ts_'+str(time)+'.pdf', transparent=True)
 plt.show()
 
 print(result) # show EA solver message
